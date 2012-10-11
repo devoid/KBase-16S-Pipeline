@@ -16,6 +16,7 @@ Tornado
 =cut
 
 #BEGIN_HEADER
+use File::Temp qw(tempdir);
 #END_HEADER
 
 sub new
@@ -464,18 +465,26 @@ sub assign_taxonomy
     my $ctx = $Bio::KBase::Tornado::Server::CallContext;
     my($return);
     #BEGIN assign_taxonomy
-
-    # Fetch qc_project files needed for mothur
-
-    my $fasta_filename;
-    my $taxa_one_filename;
-    my $taxa_two_filename;
-    my $cpu_count = 8;
-    # Fetch taxonomies that we will use
-    # TODO : replace these hardcoded values with options?
-
-    # Call mothur
-
+    my $tempdir = tempdir();
+    # Get the file contents 
+    my $ids = {
+        "r1.fasta"  => $aligned_reads->{alignment_file_one},
+        "r2.fasta"  => $aligned_reads->{alignment_file_two},
+        "r1.names"  => $aligned_reads->{read_degeneracy_file_one},
+        "r2.names"  => $aligned_reads->{read_degeneracy_file_two},
+        "g.groups"  => $aligned_reads->{group_file},
+    };
+    foreach my $key (keys %$ids) {
+        _shock_copy_file($ids->{$key}, "$tempdir/$key");
+    }
+    # Call mothur script
+    system(
+        "tornado-tax-prep.sh $tempdir ".
+        "$tempdir/r1.fasta $tempdir/r2.fasta ".
+        "$tempdir/r1.names $tempdir/r2.names ".
+        "$tempdir/g.groups"
+    );
+    my $fasta_filename = "$tempdir/for_taxonomy.fasta"
     system("mothur '#classify.seqs(fasta=$fasta_filename, reference=$taxa_one_filename, taxonomy=$taxa_two_filename, processors=$cpu_count)");
 
     # Process results from mothur

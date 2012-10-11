@@ -51,6 +51,10 @@ bin: $(BIN_PERL)
 $(BIN_DIR)/%: scripts/%.pl 
 	$(TOOLS_DIR)/wrap_perl '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
 
+mothur:
+	cd mothur; ./download_and_install.sh $(TARGET)
+
+
 deploy: deploy-service
 
 deploy-service: deploy-dir deploy-scripts deploy-libs deploy-services
@@ -79,9 +83,10 @@ deploy-scripts:
 deploy-libs:
 	rsync -arv lib/. $(TARGET)/lib/.
 
-deploy-services: deploy-basic-service deploy-data-service deploy-cli-service
 
-deploy-basic-service:
+deploy-services: mothur deploy-service
+
+deploy-service:
 	tpage $(SERV_TPAGE_ARGS) service/start_service.tt > $(TARGET)/services/$(SERV_SERVICE)/start_service; \
 	chmod +x $(TARGET)/services/$(SERV_SERVICE)/start_service; \
 	tpage $(SERV_TPAGE_ARGS) service/stop_service.tt > $(TARGET)/services/$(SERV_SERVICE)/stop_service; \
