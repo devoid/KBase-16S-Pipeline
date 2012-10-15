@@ -17,6 +17,19 @@ Tornado
 
 #BEGIN_HEADER
 use File::Temp qw(tempdir);
+use LWP::Simple qw(getstore mirror);
+
+sub shock_server {
+    my ($self, $val) = @_;
+    $self->{_shock_server} = $val if $val;
+    return $self->{_shock_server};
+}
+
+sub shock_copy_file {
+    my ($self, $uuid, $path) = @_;
+    my $url = $self->shock_server . "/node/$uuid?download";
+    return getstore($url, $path);
+}
 #END_HEADER
 
 sub new
@@ -26,6 +39,7 @@ sub new
     };
     bless $self, $class;
     #BEGIN_CONSTRUCTOR
+    $self->shock_server("http://kbase.us/services/shock-api");
     #END_CONSTRUCTOR
 
     if ($self->can('_init_instance'))
@@ -475,7 +489,7 @@ sub assign_taxonomy
         "g.groups"  => $aligned_reads->{group_file},
     };
     foreach my $key (keys %$ids) {
-        _shock_copy_file($ids->{$key}, "$tempdir/$key");
+        $self->shock_copy_file($ids->{$key}, "$tempdir/$key");
     }
     # Call mothur script
     system(
@@ -484,7 +498,7 @@ sub assign_taxonomy
         "$tempdir/r1.names $tempdir/r2.names ".
         "$tempdir/g.groups"
     );
-    my $fasta_filename = "$tempdir/for_taxonomy.fasta"
+    my $fasta_filename = "$tempdir/for_taxonomy.fasta";
     system("mothur '#classify.seqs(fasta=$fasta_filename, reference=$taxa_one_filename, taxonomy=$taxa_two_filename, processors=$cpu_count)");
 
     # Process results from mothur
